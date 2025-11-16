@@ -50,4 +50,55 @@ describe("signal - createVar / derived signals", () => {
     b.set(10);
     expect(summed.get()).toBe(15);
   });
+
+  it("subscribe calls the callback on value changes", () => {
+    const v = new Var(100);
+    const observer = vi.fn();
+    const subscription = v.addObserver(observer);
+
+    expect(observer).toHaveBeenCalledWith(100);
+
+    v.set(200);
+    expect(observer).toHaveBeenCalledWith(200);
+
+    v.set(300);
+    expect(observer).toHaveBeenCalledWith(300);
+
+    expect(observer).toHaveBeenCalledTimes(3);
+
+    subscription.kill();
+    v.set(400);
+    expect(observer).toHaveBeenCalledTimes(3);
+  });
+
+  it("multiple observers are supported", () => {
+    const v = new Var("initial");
+    const signal = v.map((x) => x.toUpperCase());
+
+    const observer1 = vi.fn();
+    const observer2 = vi.fn();
+    const sub1 = signal.addObserver(observer1);
+    const sub2 = signal.addObserver(observer2);
+
+    expect(observer1).toHaveBeenCalledWith("INITIAL");
+    expect(observer2).toHaveBeenCalledWith("INITIAL");
+
+    v.set("changed");
+    expect(observer1).toHaveBeenCalledWith("CHANGED");
+    expect(observer2).toHaveBeenCalledWith("CHANGED");
+
+    expect(observer1).toHaveBeenCalledTimes(2);
+    expect(observer2).toHaveBeenCalledTimes(2);
+
+    sub1.kill();
+    v.set("final");
+    expect(observer1).toHaveBeenCalledTimes(2);
+    expect(observer2).toHaveBeenCalledWith("FINAL");
+    expect(observer2).toHaveBeenCalledTimes(3);
+
+    sub2.kill();
+    v.set("no observers");
+    expect(observer1).toHaveBeenCalledTimes(2);
+    expect(observer2).toHaveBeenCalledTimes(3);
+  });
 });

@@ -1,5 +1,10 @@
+export interface Subscription {
+  kill(): void;
+}
+
 export abstract class Signal<T> {
-  protected dependents = new Set<DerivedSignal<any>>();
+  #derivedSignals = new Set<DerivedSignal<any>>();
+  #observers = new Set<Observer>();
 
   abstract get(): T;
   map<U>(fn: (value: T) => U): Signal<U> {
@@ -16,14 +21,32 @@ export abstract class Signal<T> {
     other.addDependent(combined);
     return combined;
   }
-  notifyDependents(): void {
-    this.dependents.forEach((d) => d.onUpstreamUpdated());
+  addObserver(fn: (value: T) => void): Subscription {
+    const exec = () => fn(this.get());
+    const observer = { exec };
+    this.#observers.add(observer);
+
+    observer.exec();
+
+    const kill = () => this.#observers.delete(observer);
+    return { kill };
   }
 
   protected addDependent(d: DerivedSignal<any>): void {
-    this.dependents.add(d);
+    this.#derivedSignals.add(d);
+  }
+  protected notifyDownstream(): void {
+    this.#notifyDerivedSignals();
+    this.#notifyObservers();
   }
   protected abstract onUpstreamUpdated(): void;
+
+  #notifyDerivedSignals(): void {
+    this.#derivedSignals.forEach(s => s.onUpstreamUpdated());
+  }
+  #notifyObservers(): void {
+    this.#observers.forEach(o => o.exec());
+  }
 }
 
 class DerivedSignal<T> extends Signal<T> {
@@ -43,8 +66,12 @@ class DerivedSignal<T> extends Signal<T> {
     if (this.#inner.isOutdated)
       return;
     this.#inner = { isOutdated: true };
-    this.notifyDependents();
+    this.notifyDownstream();
   }
+}
+
+interface Observer {
+  exec(): void;
 }
 
 export class Var<T> extends Signal<T> {
@@ -62,7 +89,7 @@ export class Var<T> extends Signal<T> {
     if (value === this.get())
       return;
     this.#value = value;
-    this.notifyDependents();
+    this.notifyDownstream();
   }
   update(fn: (value: T) => T): void {
     this.set(fn(this.get()));
