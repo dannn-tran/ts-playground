@@ -2,7 +2,7 @@ export abstract class Signal<T> {
   protected dependents = new Set<DerivedSignal<any>>();
 
   abstract get(): T;
-  map<U>(fn: (value: T) => U): DerivedSignal<U> {
+  map<U>(fn: (value: T) => U): Signal<U> {
     const derived = new DerivedSignal(() => fn(this.get()));
     this.addDependent(derived);
     return derived;
