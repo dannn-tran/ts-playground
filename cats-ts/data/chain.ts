@@ -207,6 +207,7 @@ interface ChainOps<A> {
 }
 
 interface NonEmptyChainOps<A> {
+  concatNE(c: Chain<A>): NonEmptyChain<A>
   last(): A
   initLastNE(): [Chain<A>, A]
   mapNE<B>(f: (a: A) => B): NonEmptyChain<B>
@@ -226,6 +227,10 @@ export function chain<A>(...as: A[]): Chain<A> {
     default:
       return singleton(as[0] as A).concat(chain(...as.slice(1)))
   }
+}
+
+export function chainNE<A>(a: A, ...as: A[]): NonEmptyChain<A> {
+  return singleton(a).concatNE(chain(...as))
 }
 
 function empty<A>(): Empty<A> {
@@ -270,13 +275,17 @@ function empty<A>(): Empty<A> {
 }
 
 function singleton<A>(a: A): Singleton<A> {
+  function concatNE(c: Chain<A>): NonEmptyChain<A> {
+    return c.type === 'empty'
+      ? singleton(a)
+      : append(singleton(a), c)
+  }
   return {
     type: 'singleton',
     a,
     append: aLeft => append(singleton(a), singleton(aLeft)),
-    concat: c => c.type === 'empty'
-      ? singleton(a)
-      : append(singleton(a), c),
+    concat: concatNE,
+    concatNE,
     contains: match => a === match,
     deleteFirst: f => f(a) ? some([a, empty()]) : none(),
     distinct: () => singleton(a),
@@ -318,6 +327,11 @@ function singleton<A>(a: A): Singleton<A> {
 }
 
 function append<A>(leftNE: NonEmptyChain<A>, rightNE: NonEmptyChain<A>): Append<A> {
+  function concatNE(c: Chain<A>): NonEmptyChain<A> {
+    return c.type === 'empty'
+      ? append(leftNE, rightNE)
+      : append(append(leftNE, rightNE), c)
+  }
   function distinctBy<B>(f: (a: A) => B) {
     return foldLeft([new Set(), chain()] as [Set<B>, Chain<A>], (b, a) => {
       const [set, chain] = b;
@@ -358,9 +372,8 @@ function append<A>(leftNE: NonEmptyChain<A>, rightNE: NonEmptyChain<A>): Append<
     leftNE,
     rightNE,
     append: a => append(leftNE, append(rightNE, singleton(a))),
-    concat: c => c.type === 'empty'
-      ? append(leftNE, rightNE)
-      : append(append(leftNE, rightNE), c),
+    concat: concatNE,
+    concatNE,
     contains: a => leftNE.contains(a) || rightNE.contains(a),
     deleteFirst: f => leftNE.deleteFirst(f).fold(
       () => rightNE.deleteFirst(f).fold(
