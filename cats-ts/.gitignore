@@ -1,0 +1,15 @@
+# Node.js
+node_modules/
+*.log
+npm-debug.log*
+.npm/
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
