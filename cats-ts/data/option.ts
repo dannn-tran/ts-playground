@@ -1,9 +1,11 @@
-interface SomeStruct<A> {
+import { NoSuchElementError } from './error.js'
+
+type SomeStruct<A> = {
   type: 'some'
   value: A
 }
 const NoneStruct = {
-  type: 'none'
+  type: 'none' as const
 }
 
 interface OptionOps<A> {
@@ -15,14 +17,17 @@ interface OptionOps<A> {
   fold<B>(ifEmpty: () => B, f: (a: A) => B): B
   forall(p: (a: A) => boolean): boolean
   foreach(f: (a: A) => void): void
-  getOrElse(defaultValue: () => Partial<A>): Partial<A>
+  get(): A
+  getOrElse(defaultValue: () => A): A
   isDefined(): boolean
   isEmpty(): boolean
   map<B>(f: (a: A) => B): Option<B>
-  orElse(alt: () => Option<Partial<A>>): Option<Partial<A>>
+  orElse(alt: () => Option<A>): Option<A>
 }
 
-export type Option<A> = OptionOps<A> & (SomeStruct<A> | typeof NoneStruct)
+type Some<A> = SomeStruct<A> & OptionOps<A>
+type None<A> = typeof NoneStruct & OptionOps<A>
+export type Option<A> = Some<A> | None<A>
 
 export function option<A>(a: A): Option<A> {
   return (a === null || a === undefined)
@@ -30,7 +35,7 @@ export function option<A>(a: A): Option<A> {
     : some(a)
 }
 
-export function some<A>(value: A): OptionOps<A> & SomeStruct<A> {
+export function some<A>(value: A): Option<A> {
   return {
     type: 'some',
     value,
@@ -42,6 +47,7 @@ export function some<A>(value: A): OptionOps<A> & SomeStruct<A> {
     fold: (_, f) => f(value),
     forall: p => p(value),
     foreach: f => f(value),
+    get: () => value,
     getOrElse: _ => value,
     isDefined: () => true,
     isEmpty: () => false,
@@ -50,7 +56,7 @@ export function some<A>(value: A): OptionOps<A> & SomeStruct<A> {
   }
 }
 
-export function none<A>(): OptionOps<A> & typeof NoneStruct {
+export function none<A>(): Option<A> {
   return {
     type: 'none',
     contains: _ => false,
@@ -61,6 +67,7 @@ export function none<A>(): OptionOps<A> & typeof NoneStruct {
     fold: (ifEmpty, _) => ifEmpty(),
     forall: _ => false,
     foreach: _ => {},
+    get: () => { throw new NoSuchElementError() },
     getOrElse: d => d(),
     isDefined: () => false,
     isEmpty: () => true,

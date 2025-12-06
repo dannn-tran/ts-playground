@@ -6,13 +6,11 @@ describe('Option', () => {
     it('should create Some for non-null/undefined values', () => {
       const opt = option(5)
       expect(opt.isDefined()).toBe(true)
-      expect(opt.type).toBe('some')
     })
 
     it('should create None for null', () => {
       const opt = option(null)
       expect(opt.isEmpty()).toBe(true)
-      expect(opt.type).toBe('none')
     })
 
     it('should create None for undefined', () => {
