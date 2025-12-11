@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { option, some, none } from './option.js'
+import { type Option, option, some, none, flattenOption } from './option.js'
 
 describe('Option', () => {
   describe('option', () => {
@@ -20,103 +20,207 @@ describe('Option', () => {
   })
 
   describe('some', () => {
-    it('should contain the value', () => {
-      const s = some(42)
-      expect(s.contains(42)).toBe(true)
-      expect(s.contains(0)).toBe(false)
+    describe('contain', () => {
+      it('should return true when match', () => {
+        expect(some(42).contains(42)).toBe(true)
+      })
+      
+      it('should return false when no match', () => {
+        expect(some(42).contains(0)).toBe(false)
+      })
     })
 
-    it('should map over value', () => {
-      const result = some(5).map(x => x * 2)
-      expect(result.contains(10)).toBe(true)
+    it('map', () => {
+      expect(some(5).map(x => x * 2).contains(10)).toBe(true)
     })
 
-    it('should flatMap correctly', () => {
-      const result = some(5).flatMap(x => some(x * 2))
-      expect(result.contains(10)).toBe(true)
+    it('flatMap', () => {
+      expect(some(5).flatMap(x => some(x * 2)).contains(10)).toBe(true)
     })
 
-    it('should fold with function', () => {
-      const result = some(5).fold(() => 0, x => x * 2)
-      expect(result).toBe(10)
+    it('fold', () => {
+      expect(some(5).fold(() => 0, x => x * 2)).toBe(10)
     })
 
-    it('should filter matching predicate', () => {
-      const result = some(5).filter(x => x > 3)
-      expect(result.isDefined()).toBe(true)
+    describe('filter', () => {
+      it('should Some true when match', () => {
+        expect(some(5).filter(x => x > 3).isDefined()).toBe(true)
+      })
+
+      it('should None fasle when no match', () => {
+        expect(some(5).filter(x => x > 10).isEmpty()).toBe(true)
+      })
     })
 
-    it('should filter non-matching predicate', () => {
-      const result = some(5).filter(x => x > 10)
-      expect(result.isEmpty()).toBe(true)
+    describe('exist', () => {
+      it('should return true when match', () => {
+        expect(some(5).exists(x => x > 3)).toBe(true)
+      })
+
+      it('should return false when no match', () => {
+        expect(some(5).exists(x => x > 10)).toBe(false)
+      })
     })
 
-    it('should exist with matching predicate', () => {
-      expect(some(5).exists(x => x > 3)).toBe(true)
-      expect(some(5).exists(x => x > 10)).toBe(false)
+    describe('forall', () => {
+      it('should return true when match', () => {
+        expect(some(5).forall(x => x > 0)).toBe(true)
+      })
+
+      it('should return false when no match', () => {
+        expect(some(5).forall(x => x > 10)).toBe(false)
+      })
     })
 
-    it('should forall with matching predicate', () => {
-      expect(some(5).forall(x => x > 0)).toBe(true)
-      expect(some(5).forall(x => x > 10)).toBe(false)
-    })
-
-    it('should foreach execute function', () => {
+    describe('foreach', () => {
       let called = false
       some(5).foreach(() => { called = true })
       expect(called).toBe(true)
     })
 
-    it('should getOrElse return value', () => {
+    describe('getOrElse', () => {
       expect(some(5).getOrElse(() => 0)).toBe(5)
     })
 
-    it('should orElse return self', () => {
-      const result = some(5).orElse(() => some(10))
-      expect(result.contains(5)).toBe(true)
+    describe('orElse', () => {
+      expect(some(5).orElse(() => some(10)).contains(5)).toBe(true)
+    })
+
+    describe('filterNot', () => {
+      it('should return Some when no match', () => {
+        expect(some(5).filterNot(x => x > 10).isDefined()).toBe(true)
+      })
+
+      it('should return None when no match', () => {
+        expect(some(5).filterNot(x => x > 3).isEmpty()).toBe(true)
+      })
+    })
+
+    describe('get', () => {
+      expect(some(42).get()).toBe(42)
+    })
+
+    describe('nonEmpty', () => {
+      expect(some(5).nonEmpty()).toBe(true)
+    })
+
+    describe('orNull', () => {
+      expect(some(42).orNull()).toBe(42)
+    })
+
+    describe('toLeft', () => {
+      expect(some(5).toLeft(() => 'error').left().exists(value => value === 5)).toBe(true)
+    })
+
+    describe('toRight', () => {
+      expect(some(5).toRight(() => 'error').contains(5)).toBe(true)
+    })
+
+    describe('zip', () => {
+      it('should return Some with Some', () => {
+        const actual = some(5).zip(some('hello'))
+
+        expect(actual.isDefined()).toBe(true)
+        actual.foreach(value => expect(value).toEqual([5, 'hello']))
+      })
+
+      it('should return None with None', () => {
+        expect(some(5).zip(none()).isEmpty()).toBe(true)
+      })
     })
   })
 
   describe('none', () => {
-    it('should not contain any value', () => {
+    it('contains', () => {
       expect(none().contains(42)).toBe(false)
     })
 
-    it('should map to None', () => {
-      const result = none<number>().map(x => x * 2)
-      expect(result.isEmpty()).toBe(true)
+    it('map', () => {
+      expect(none<number>().map(x => x * 2).isEmpty()).toBe(true)
     })
 
-    it('should flatMap to None', () => {
-      const result = none<number>().flatMap(x => some(x * 2))
-      expect(result.isEmpty()).toBe(true)
+    it('flatMap', () => {
+      expect(none<number>().flatMap(x => some(x * 2)).isEmpty()).toBe(true)
     })
 
-    it('should fold with ifEmpty', () => {
-      const result = none<number>().fold(() => 0, x => x * 2)
-      expect(result).toBe(0)
+    it('fold', () => {
+      expect(none<number>().fold(() => 0, x => x * 2)).toBe(0)
     })
 
-    it('should filter to None', () => {
-      const result = none<number>().filter(x => x > 3)
-      expect(result.isEmpty()).toBe(true)
+    describe('filter', () => {
+      expect(none<number>().filter(_ => true).isEmpty()).toBe(true)
     })
 
-    it('should not exist', () => {
-      expect(none<number>().exists(x => x > 3)).toBe(false)
+    describe('exist', () => {
+      expect(none<number>().exists(_ => true)).toBe(false)
     })
 
-    it('should forall return true', () => {
-      expect(none<number>().forall(x => x > 0)).toBe(false)
+    describe('forall', () => {
+      expect(none<number>().forall(_ => true)).toBe(false)
     })
 
-    it('should getOrElse return default', () => {
-      expect(none<number>().getOrElse(() => 42)).toBe(42)
+    describe('foreach', () => {
+      let called = false
+      none().foreach(() => { called = true })
+      expect(called).toBe(false)
     })
 
-    it('should orElse return alternative', () => {
-      const result = none<number>().orElse(() => some(10))
-      expect(result.contains(10)).toBe(true)
+    describe('getOrElse', () => {
+      expect(none().getOrElse(() => 42)).toBe(42)
+    })
+
+    describe('orElse', () => {
+      expect(none().orElse(() => some(10)).contains(10)).toBe(true)
+    })
+
+    describe('filterNot', () => {
+      it('should return None', () => {
+        expect(none<number>().filterNot(x => x > 3).isEmpty()).toBe(true)
+      })
+    })
+
+    describe('get', () => {
+      expect(() => none<number>().get()).toThrow()
+    })
+
+    describe('nonEmpty', () => {
+      expect(none<number>().nonEmpty()).toBe(false)
+    })
+
+    describe('orNull', () => {
+      expect(none<number>().orNull()).toBe(null)
+    })
+
+    describe('toLeft', () => {
+      expect(none().toLeft(() => 'error').contains('error'))
+    })
+
+    describe('toRight', () => {
+      expect(none().toRight(() => 'error').left().exists(value => value === 'error')).toBe(true)
+    })
+
+    describe('zip', () => {
+      it('should return None with Some', () => {
+        expect(none<number>().zip(some('hello')).isEmpty()).toBe(true)
+      })
+
+      it('should return None with None', () => {
+        expect(none<number>().zip(none()).isEmpty()).toBe(true)
+      })
+    })
+  })
+
+  describe('flattenOption', () => {
+    it('should flatten Some of Some to value', () => {
+      expect(flattenOption(some(some(42))).contains(42)).toBe(true)
+    })
+
+    it('should flatten Some of None to None', () => {
+      expect(flattenOption(some(none())).isEmpty()).toBe(true)
+    })
+
+    it('should flatten None to None', () => {
+      expect(flattenOption(none<Option<number>>()).isEmpty()).toBe(true)
     })
   })
 })
