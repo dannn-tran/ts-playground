@@ -72,17 +72,17 @@ describe('Option', () => {
       })
     })
 
-    describe('foreach', () => {
+    it('foreach', () => {
       let called = false
       some(5).foreach(() => { called = true })
       expect(called).toBe(true)
     })
 
-    describe('getOrElse', () => {
+    it('getOrElse', () => {
       expect(some(5).getOrElse(() => 0)).toBe(5)
     })
 
-    describe('orElse', () => {
+    it('orElse', () => {
       expect(some(5).orElse(() => some(10)).contains(5)).toBe(true)
     })
 
@@ -96,23 +96,23 @@ describe('Option', () => {
       })
     })
 
-    describe('get', () => {
+    it('get', () => {
       expect(some(42).get()).toBe(42)
     })
 
-    describe('nonEmpty', () => {
+    it('nonEmpty', () => {
       expect(some(5).nonEmpty()).toBe(true)
     })
 
-    describe('orNull', () => {
+    it('orNull', () => {
       expect(some(42).orNull()).toBe(42)
     })
 
-    describe('toLeft', () => {
+    it('toLeft', () => {
       expect(some(5).toLeft(() => 'error').left().exists(value => value === 5)).toBe(true)
     })
 
-    describe('toRight', () => {
+    it('toRight', () => {
       expect(some(5).toRight(() => 'error').contains(5)).toBe(true)
     })
 
@@ -147,55 +147,53 @@ describe('Option', () => {
       expect(none<number>().fold(() => 0, x => x * 2)).toBe(0)
     })
 
-    describe('filter', () => {
+    it('filter', () => {
       expect(none<number>().filter(_ => true).isEmpty()).toBe(true)
     })
 
-    describe('exist', () => {
+    it('exist', () => {
       expect(none<number>().exists(_ => true)).toBe(false)
     })
 
-    describe('forall', () => {
+    it('forall', () => {
       expect(none<number>().forall(_ => true)).toBe(false)
     })
 
-    describe('foreach', () => {
+    it('foreach', () => {
       let called = false
       none().foreach(() => { called = true })
       expect(called).toBe(false)
     })
 
-    describe('getOrElse', () => {
+    it('getOrElse', () => {
       expect(none().getOrElse(() => 42)).toBe(42)
     })
 
-    describe('orElse', () => {
+    it('orElse', () => {
       expect(none().orElse(() => some(10)).contains(10)).toBe(true)
     })
 
-    describe('filterNot', () => {
-      it('should return None', () => {
-        expect(none<number>().filterNot(x => x > 3).isEmpty()).toBe(true)
-      })
+    it('filterNot', () => {
+      expect(none<number>().filterNot(x => x > 3).isEmpty()).toBe(true)
     })
 
-    describe('get', () => {
+    it('get', () => {
       expect(() => none<number>().get()).toThrow()
     })
 
-    describe('nonEmpty', () => {
+    it('nonEmpty', () => {
       expect(none<number>().nonEmpty()).toBe(false)
     })
 
-    describe('orNull', () => {
+    it('orNull', () => {
       expect(none<number>().orNull()).toBe(null)
     })
 
-    describe('toLeft', () => {
+    it('toLeft', () => {
       expect(none().toLeft(() => 'error').contains('error'))
     })
 
-    describe('toRight', () => {
+    it('toRight', () => {
       expect(none().toRight(() => 'error').left().exists(value => value === 'error')).toBe(true)
     })
 

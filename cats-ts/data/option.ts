@@ -82,6 +82,7 @@ export function none<A>(): Option<A> {
   })
 }
 
+/** Returns the nested Option value if it is nonempty. */
 export function flattenOption<B, A extends Option<B>>(opt: Option<A>): Option<B> {
   return opt.flatMap(identity)
 }
