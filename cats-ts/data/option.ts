@@ -1,4 +1,6 @@
 import { NoSuchElementError } from './error.js'
+import { identity } from './identity.js'
+import { UNIT, type Unit } from './unit.js'
 
 type SomeStruct<A> = {
   type: 'some'
@@ -19,12 +21,13 @@ type OptionOps<A> = OptionOpsBase<A> & {
   filterNot(p: (a: A) => boolean): Option<A>
   flatMap<B>(f: (a: A) => Option<B>): Option<B>
   forall(p: (a: A) => boolean): boolean
-  foreach(f: (a: A) => void): void
+  foreach<U>(f: (a: A) => U): Unit
   get(): A
-  getOrElse(defaultValue: () => A): A
+  getOrElse<B>(defaultValue: () => A): A | B
   isDefined(): boolean
   isEmpty(): boolean
   map<B>(f: (a: A) => B): Option<B>
+  nonEmpty: () => boolean
   orElse(alt: () => Option<A>): Option<A>
 }
 
@@ -72,12 +75,16 @@ function augment<A>(base: (SomeStruct<A> | NoneStruct) & OptionOpsBase<A>): Opti
     filterNot: p => filter(a => !p(a)),
     flatMap: f => base.fold(() => none(), f),
     forall: exists,
-    foreach: f => base.fold(() => {}, f),
-    get: () => base.fold(() => { throw new NoSuchElementError() }, a => a),
-    getOrElse: defaultValue => base.fold(defaultValue, a => a),
+    foreach: f => {
+      base.fold(() => {}, a => { f(a) })
+      return UNIT
+    },
+    get: () => base.fold(() => { throw new NoSuchElementError() }, identity),
+    getOrElse: defaultValue => base.fold(defaultValue, identity),
     isDefined,
     isEmpty: () => !isDefined(),
     map: f => base.fold(() => none(), a => some(f(a))),
+    nonEmpty: isDefined,
     orElse: alt => base.fold(alt, some)
   }
 }
